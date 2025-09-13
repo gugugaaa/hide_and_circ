@@ -8,6 +8,8 @@
 5、分别展示一行二列：所有轮廓点、大s曲线
 6、用窗口夹角来找到交点，并筛除掉相聚太近的交点
 7、根据交点分割样条，得到真实的圆弧，从而拟合出大部分被遮蔽的圆形
+8、对拟合出来的圆形用聚类分割为簇
+9、对每个簇，如果有多个候选且arc length相差很大，选用最长弧长的拟合结果，如果相差20%以内就综合结果。
 
 淘汰的内容：
 1、小s样条
@@ -27,6 +29,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import gen_sample as gen
 from get_contours import get_outer_inner_contours
 from concave_pts import find_concave_points_angle, remove_too_close_pts
+from seg_spline import segment_by_concave_points
+from fit_circle import fit_arc_to_circle
 
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 支持中文字体
 plt.rcParams['axes.unicode_minus'] = False    # 正确显示负号
@@ -104,22 +108,6 @@ plt.tight_layout()
 
 # === 根据凹点预测圆弧 ===
 
-# --- 最小二乘法拟合圆 ---
-
-def fit_circle_least_squares(points):
-    """最小二乘拟合圆: 返回 (center_x, center_y, radius)"""
-    x, y = points[:, 0], points[:, 1]
-    A = np.c_[x, y, np.ones_like(x)]
-    b = -(x**2 + y**2)
-    try:
-        params = np.linalg.lstsq(A, b, rcond=None)[0]  # D, E, F
-        cx = -params[0] / 2
-        cy = -params[1] / 2
-        r = np.sqrt(cx**2 + cy**2 - params[2])
-        return cx, cy, r
-    except:
-        return None  # 拟合失败
-
 # 创建新的可视化窗口
 fig3, axes3 = plt.subplots(1, 2, figsize=(12, 5))
 for ax in axes3:
@@ -130,47 +118,29 @@ for ax in axes3:
 axes3[0].set_title('样条分割情况')
 axes3[1].set_title('拟合的圆')
 
-colors = ['r', 'g', 'b', 'c', 'm', 'y']
 fitted_circles = []
+colors = ['r', 'g', 'b', 'c', 'm', 'y']
 
 for idx, (points, tck, u) in enumerate(contour_splines):
     color = colors[idx % len(colors)]
     
-    # --- 找到凹点对应的u ---
-    concave_us = []
-    u_dense = np.linspace(0, 1, 100)
-    spline_points = splev(u_dense, tck)  # [x_dense, y_dense]
-    for concave_pt in concave_pts_angle_filtered:
-        dists = np.linalg.norm(spline_points - concave_pt[:, None], axis=0)
-        closest_idx = np.argmin(dists)
-        concave_us.append(u_dense[closest_idx])
-    concave_us = sorted(concave_us)
+    # 使用seg_spline函数进行分割
+    segments_with_arc = segment_by_concave_points(points, tck, concave_pts_angle_filtered)
     
-    # --- 分割成段 ---
-    segments = []
-    u_splits = [0] + concave_us + [1]
-    for i in range(len(u_splits) - 1):
-        u_seg = np.linspace(u_splits[i], u_splits[i+1], 50)
-        seg_points = np.array(splev(u_seg, tck)).T  # (N, 2)
-        segments.append(seg_points)
-        
-        # 绘制分割的段
+    # 可视化分割段
+    for seg_points, arc_length in segments_with_arc:
         axes3[0].plot(seg_points[:, 0], seg_points[:, 1], color=color, linewidth=2, alpha=0.7)
     
-    # --- 对每个段拟合圆 ---
-    for seg_idx, seg_points in enumerate(segments):
-        if len(seg_points) < 3: continue  # 太短跳过
-        circle_params = fit_circle_least_squares(seg_points)
-        if circle_params is not None:
-            cx, cy, r = circle_params
-            fitted_circles.append((cx, cy, r))
-            
-            # 绘制拟合的完整圆
+    # 拟合圆
+    for seg_points, arc_length in segments_with_arc:
+        fitted_circle = fit_arc_to_circle(seg_points, arc_length)
+        if fitted_circle is not None:
+            fitted_circles.append(fitted_circle)
             theta = np.linspace(0, 2*np.pi, 100)
-            circle_x = cx + r * np.cos(theta)
-            circle_y = cy + r * np.sin(theta)
+            circle_x = fitted_circle.center_x + fitted_circle.radius * np.cos(theta)
+            circle_y = fitted_circle.center_y + fitted_circle.radius * np.sin(theta)
             axes3[1].plot(circle_x, circle_y, '--', color=color, alpha=0.6, linewidth=1.5)
-            axes3[1].plot(cx, cy, 'o', color=color, markersize=5)
+            axes3[1].plot(fitted_circle.center_x, fitted_circle.center_y, 'o', color=color, markersize=5)
 
 # 在分割图上标记凹点
 if concave_pts_angle_filtered.size > 0:

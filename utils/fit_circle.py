@@ -15,6 +15,10 @@ def fit_circle_least_squares(points):
         return None  # 拟合失败
 
 class ArcFitResult:
+    """
+    拟合圆弧的结果类
+    包含圆心坐标(center_x, center_y), 半径(radius), 以及弧长(arc_length)
+    """
     def __init__(self, center_x, center_y, radius, arc_length):
         self.center_x = center_x
         self.center_y = center_y
@@ -22,6 +26,10 @@ class ArcFitResult:
         self.arc_length = arc_length
 
 def fit_arc_to_circle(seg_points, arc_length):
+    """
+    根据样条的采样点，拟合圆弧
+    返回： ArcFitResult 或 None
+    """
     circle_params = fit_circle_least_squares(seg_points)
     if circle_params is not None:
         cx, cy, r = circle_params

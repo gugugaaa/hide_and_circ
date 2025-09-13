@@ -102,8 +102,8 @@ def remove_too_close_pts(points, image, percentage_threshold=5):
     image: 图像用于计算对角线长度
     percentage_threshold: 距离阈值占图像对角线长度的百分比
     """
-    if not points:
-        return points
+    if points.size == 0:  # 使用 .size 检查np数组是否为空
+        return []
     
     # 计算图像对角线长度
     height, width = image.shape[:2]

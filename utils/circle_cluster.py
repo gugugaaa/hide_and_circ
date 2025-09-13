@@ -78,11 +78,11 @@ def filter_clusters_by_arc_length(clusters, min_arc_ratio=0.5, arc_diff_threshol
     对每个簇应用弧长过滤：
     - 如果簇只有一个圆，直接保留。
     - 如果多个候选且 max_arc / min_arc > arc_diff_threshold，并且最大弧 > min_arc_ratio * 2πr，则选用最长弧的拟合结果。
-    - 否则，返回 None（不满足条件）。
+    - 否则，返回整个簇（不满足条件时原封不动返回cluster）。
     :param clusters: list of lists，每个子列表是一个簇的圆形列表
     :param min_arc_ratio: 最大弧需 > min_arc_ratio * 2πr (默认0.5，即50%)
     :param arc_diff_threshold: 如果 max_arc / min_arc > threshold，则视为相差很大
-    :return: results (list)，每个元素对应一个簇的最佳圆 (ArcFitResult) 或 None
+    :return: results (list)，每个元素对应一个簇的最佳圆 (ArcFitResult) 或整个cluster
     """
     results = []
     for cluster in clusters:
@@ -108,7 +108,7 @@ def filter_clusters_by_arc_length(clusters, min_arc_ratio=0.5, arc_diff_threshol
         if is_large_diff and is_large_enough:
             results.append(max_circle)  # 选择最长弧的拟合结果
         else:
-            results.append(None)  # 不满足条件时返回None
+            results.append(cluster)  # 不满足条件时返回整个cluster
             
     return results
 

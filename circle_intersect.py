@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # 我的组件
 from get_contours import get_outer_inner_contours
 from sample_pts import uniform_sampling
-from intersection_detect import stabilize_intersection_points, detect_intersection_points_angle
+from concave_pts import remove_too_close_pts, detect_intersection_points_angle
 
 # 中文支持
 plt.rcParams['font.sans-serif'] = ['SimHei']
@@ -41,7 +41,7 @@ def process_contours(contours, image, sampling_interval, angle_threshold, percen
         intersection_points, angle_values = detect_intersection_points_angle(uniform_sampled, angle_threshold)
         
         # 稳定化交点
-        stabilized_points = stabilize_intersection_points(intersection_points, image, percentage_threshold)
+        stabilized_points = remove_too_close_pts(intersection_points, image, percentage_threshold)
         
         # 临时打印被接纳交点的角度分布
         if stabilized_points:

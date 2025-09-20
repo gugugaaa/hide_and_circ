@@ -43,7 +43,7 @@ def find_concave_points_defects(contours, epsilon=1.0, depth_threshold=1000):
     return concave_points, debug_info
 
 # 方法2 - 用向量夹角找凹点
-def find_concave_points_angle(contours, k=2, angle_threshold=120):
+def find_concave_points_angle(contours, k=2, angle_threshold=60):
     """
     用局部向量夹角找凹点
     :param contours: 轮廓列表

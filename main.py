@@ -16,7 +16,7 @@ plt.rcParams['font.sans-serif'] = ['SimHei']  # 支持中文字体
 plt.rcParams['axes.unicode_minus'] = False    # 正确显示负号
 
 # === 步骤1、画图 ===
-image = gen.gen_sample_3()
+image = gen.gen_sample_2()
 
 # === 步骤1.5、灰度高斯二值化 ===
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -46,7 +46,7 @@ s = 20
 contour_splines = []  # 保存每个轮廓的样条拟合结果
 for contour in outer_contours + inner_contours:
     points = contour.squeeze()
-    tck, u = splprep(points.T, s=s, k=3)
+    tck, u = splprep(points.T, s=s, k=3, per=1)
     contour_splines.append((points, tck, u))
     u_new = np.linspace(0, 1, 200)
     x_new, y_new = splev(u_new, tck)
@@ -55,8 +55,8 @@ axes[1].set_title(f'B样条拟合 (s={s})')
 axes[1].invert_yaxis()
 
 # === 步骤4、找圆弧交点（凹点） ===
-concave_pts, debug_angle = find_concave_points_angle(outer_contours + inner_contours, k=2, angle_threshold=50)
-concave_pts_filtered = np.array(remove_too_close_pts(concave_pts, gray, percentage_threshold=5))
+concave_pts, debug_angle = find_concave_points_angle(outer_contours + inner_contours, k=4, angle_threshold=40)
+concave_pts_filtered = np.array(remove_too_close_pts(concave_pts, gray, percentage_threshold=2))
 
 fig2, axes2 = plt.subplots(1, 2, figsize=(10, 5))
 axes2[0].set_title('夹角法-夹角分布')
@@ -116,7 +116,7 @@ for idx, (points, tck, u) in enumerate(contour_splines):
 # 在分割图上标记凹点
 if concave_pts_filtered.size > 0:
     axes3[0].scatter(concave_pts_filtered[:, 0], concave_pts_filtered[:, 1], 
-                     c='red', s=30, marker='x', linewidths=2, label='凹点')
+                     c='blue', s=30, marker='x', linewidths=2, label='凹点')
     axes3[0].legend()
 
 axes3[0].axis('off')
